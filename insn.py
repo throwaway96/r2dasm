@@ -205,28 +205,28 @@ class R2InsnTemplate:
 INSNS: list[R2InsnTemplate] = [
     # 16-bit / 2-byte / "BT"?
     R2InsnTemplate('l.nop',    2, '1000000000000001'),                               # disasm; guesse
-    R2InsnTemplate('l.j',      2, '100100nnnnnnnnnn', '%n'),                         # chenxing
     R2InsnTemplate('bt.trap',  2, '1000000000000010', '1'),                          # disasm; don't know how to decode
-    R2InsnTemplate('l.jr?', 2, '100001xxxxxyyyyy', '??? r%x, r%y'),                        # disasm
-    R2InsnTemplate('l.addi',   2, '100111dddddkkkkk', 'r%d, r%d, %k', signed={'k'}), # backtrace (BT), guess
+    R2InsnTemplate('l.jr?',    2, '100001xxxxxyyyyy', '??? r%x, r%y'),               # disasm
+    R2InsnTemplate('l.j',      2, '100100nnnnnnnnnn', '%n'),                         # chenxing
     # XXX: may be a mov-type insn that sets rD <- K
     R2InsnTemplate('l.andi?',  2, '100110dddddkkkkk', 'r%d, r%d, %k', signed={'k'}), # disasm, guess
+    R2InsnTemplate('l.addi',   2, '100111dddddkkkkk', 'r%d, r%d, %k', signed={'k'}), # backtrace, guess
 
     # 24-bit / 3-byte / "BN"?
     R2InsnTemplate('l.nop',   3, '000000000000000000000000'),                    # chenxing
     R2InsnTemplate('l.lhz',   3, '000010dddddaaaaa00000001', 'r%d, 0(r%a)'),     # chenxing
-    R2InsnTemplate('l.sw',    3, '000011bbbbbaaaaa00000000', '0(r%a), r%b'),     # chenxing, backtrace (BN)
-    R2InsnTemplate('l.sfgtui',3, '010111aaaaaiiiiiiii11011', 'r%a, %i', signed={'i'}), # disasm
-    R2InsnTemplate('?entri?', 3, '010111xxxxyyyyyyyyy11000', '??? %x, %y'),      # backtrace
-    R2InsnTemplate('l.addi',  3, '000111dddddaaaaakkkkkkkk', 'r%d, r%a, %k', signed={'k'}), # chenxing, backtrace (BN)
+    R2InsnTemplate('l.sw',    3, '000011bbbbbaaaaa00000000', '0(r%a), r%b'),     # chenxing, backtrace
+    R2InsnTemplate('l.addi',  3, '000111dddddaaaaakkkkkkkk', 'r%d, r%a, %k', signed={'k'}), # chenxing, backtrace
     R2InsnTemplate('l.bf',    3, '001000nnnnnnnnnnnnnnnn01', '%n', signed={'n'}),# chenxing(mod), disasm
     R2InsnTemplate('l.movhi', 3, '001101100000000000000001', 'r1, ???'),         # chenxing
+    R2InsnTemplate('l.mul',   3, '010000dddddaaaaabbbbb011', 'r%d, r%a, r%b'),   # disasm
     R2InsnTemplate('l.and',   3, '010001dddddaaaaabbbbb100', 'r%d, r%a, r%b'),   # chenxing
     R2InsnTemplate('l.ori',   3, '010100aaaaabbbbbkkkkkkkk', 'r%a, r%b, %k'),    # chenxing
+    R2InsnTemplate('l.sfgtui',3, '010111aaaaaiiiiiiii11011', 'r%a, %i', signed={'i'}), # disasm
+    R2InsnTemplate('?entri?', 3, '010111xxxxyyyyyyyyy11000', '??? %x, %y'),      # backtrace
     R2InsnTemplate('l.sfeqi', 3, '010111aaaaaiiiii00000001', 'r%a, %i'),         # chenxing
     R2InsnTemplate('l.sfne',  3, '010111aaaaabbbbb00001101', 'r%a, r%b'),        # chenxing
     R2InsnTemplate('l.sfgeu', 3, '010111bbbbbaaaaa00010111', 'r%a, r%b'),        # chenxing
-    R2InsnTemplate('l.mul',   3, '010000dddddaaaaabbbbb011', 'r%d, r%a, r%b'),   # disasm
 
     # 32-bit / 4-byte / "BG"?
     R2InsnTemplate('l.movhi', 4, '110000dddddkkkkkkkkkkkkkkkk00001', 'r%d, %k'),                # chenxing(mod), disasm
@@ -234,11 +234,11 @@ INSNS: list[R2InsnTemplate] = [
     R2InsnTemplate('l.mfspr', 4, '110000dddddaaaaakkkkkkkkkkkk1111', 'r%d, r%a, %k'),           # chenxing
     R2InsnTemplate('l.andi',  4, '110001dddddaaaaakkkkkkkkkkkkkkkk', 'r%d, r%a, %k'),           # chenxing
     R2InsnTemplate('l.ori',   4, '110010dddddaaaaakkkkkkkkkkkkkkkk', 'r%d, r%a, %k'),           # chenxing
+    # XXX: n is probably wrong
+    R2InsnTemplate('l.bf',    4, '11010100nnnnnnnnnnnnnnnnnnnnnnnn', '%n', signed={'n'}),       # disasm, guess
     R2InsnTemplate('l.j',     4, '111010nnnnnnnnnnnnnnnnnnnnnnnn11', '%n'),                     # chenxing
     R2InsnTemplate('l.sw',    4, '111011bbbbbaaaaaiiiiiiiiiiiiiiii', '%i(r%a), r%b'),           # chenxing, backtrace
     R2InsnTemplate('l.addi',  4, '111111dddddaaaaakkkkkkkkkkkkkkkk', 'r%d, r%a, %k'),           # chenxing, backtrace
-    # XXX: n is probably wrong
-    R2InsnTemplate('l.bf',    4, '11010100nnnnnnnnnnnnnnnnnnnnnnnn', '%n', signed={'n'}),       # disasm, guess
     R2InsnTemplate('l.invalidate_line', 4, '11110100000aaaaa00000000000j0001', '0(r%a), %j'),   # chenxing
     R2InsnTemplate('l.invalidate_line', 4, '11110100000aaaaa00000000001j0111', '0(r%a), %j'),   # disasm
     R2InsnTemplate('l.syncwritebuffer', 4, '11110100000000000000000000000101'),                 # disasm
