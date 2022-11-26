@@ -80,8 +80,8 @@ def main() -> None:
     for filename in TEST_INPUTS:
         print(f"*** {filename} ***")
 
-        with open(filename, 'rb') as fp:
-            fbuf: FileBuffer = FileBuffer(fp)
+        with open(filename, 'rb') as file:
+            fbuf: FileBuffer = FileBuffer(file)
             dasm(fbuf)
 
         print("\n")

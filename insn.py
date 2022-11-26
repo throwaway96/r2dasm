@@ -35,6 +35,7 @@ class BitRange:
         self.value_offset = value_offset
 
     def extract_part(self, instruction: int) -> int:
+        """Get the value of this bit range."""
         value: int = ((instruction >> self.insn_offset) & ((1 << self.length) - 1))
 
         return value << self.value_offset
@@ -84,7 +85,7 @@ class R2OperandTemplate:
 
             run_length: int = lsb_index - msb_index + 1
             lsb_offset: int = template_len - lsb_index - 1
-            #print(f"from {template_lower} adding {run_length}-bit range @ {lsb_offset} -> {value_offset}")
+
             self.ranges.append(BitRange(run_length, lsb_offset, value_offset))
 
             value_offset += run_length
@@ -92,7 +93,8 @@ class R2OperandTemplate:
 
 
     def extract(self, instruction: int) -> 'R2Operand':
-        assert(self.bit_length > 0)
+        """Decode the value of this operand from instruction."""
+        assert self.bit_length > 0
 
         value: int = 0
 
@@ -188,14 +190,16 @@ class R2InsnTemplate:
         self.mask = int(''.join('1' if ch in {'0', '1'} else '0' for ch in self.bits_template), 2)
 
     def match(self, instruction: int) -> bool:
+        """Check whether an instruction matches this template."""
         return (instruction & self.mask) == self.bits
 
     def parse(self, instruction: int) -> 'R2Insn':
+        """Decode an instruction using this template."""
         args: dict[str, R2Operand] = {}
 
         for (arg, templ) in self.opr_templates.items():
             args[arg] = templ.extract(instruction)
-    
+
         return R2Insn(self.length, instruction, self, args)
 
 INSNS: list[R2InsnTemplate] = [
