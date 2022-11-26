@@ -4,12 +4,11 @@
 """MStar Aeon R2 disassembler."""
 
 
-from io import BufferedReader
-from os import SEEK_END, SEEK_SET
 import re
 from typing import Final
 from struct import unpack
 
+from filebuffer import FileBuffer
 
 TEST_INPUTS: Final[list[str]] = [
     'tzfw_100180_c0.bin', 'tzfw_100280_e0.bin', 'fpf.bin',
@@ -259,6 +258,7 @@ INSNS: list[R2InsnTemplate] = [
 
 
 class R2Insn:
+    """A disassembled instruction."""
     length: int
     bits: int
     template: R2InsnTemplate | None
@@ -301,16 +301,18 @@ class R2Insn:
 
         return f"{self.template.mnemonic:12s} {args}"
 
+
 ZEROES: Final[bytes] = b'\x00' * 4
 
-def dasm_at(fp: BufferedReader, offset: int) -> R2Insn:
-    assert(offset >= 0)
+def dasm_at(fbuf: FileBuffer, offset: int) -> R2Insn:
+    """Disassemble single instruction at offset."""
+    assert offset >= 0
 
     # insn can be up to 4 bytes long
-    buf: bytes = buf_read(fp, offset, 4)
+    data: bytes = fbuf.read(offset, 4)
 
     ms_byte: int
-    (ms_byte,) = unpack('B', buf[0:1])
+    (ms_byte,) = unpack('B', data[0:1])
 
     # top three bits determine length
     length_index: int = ms_byte >> 5
@@ -319,7 +321,7 @@ def dasm_at(fp: BufferedReader, offset: int) -> R2Insn:
 
     assert 0 < length <= 4
 
-    raw: bytes = buf[0:length]
+    raw: bytes = data[0:length]
 
     bits: int
     (bits,) = unpack('>I', ZEROES[0:4 - length] + raw)
@@ -339,46 +341,30 @@ def dasm_at(fp: BufferedReader, offset: int) -> R2Insn:
     return insn
 
 
-def dasm(fp: BufferedReader) -> None:
+def dasm(fbuf: FileBuffer) -> None:
+    """Disassemble entire buffer."""
     offset: int = 0
 
-    length: int = buf_get_len(fp)
-
+    length: int = len(fbuf)
 
     while offset < length:
-        insn: R2Insn = dasm_at(fp, offset)
+        insn: R2Insn = dasm_at(fbuf, offset)
 
         print(f"{offset:08x}: {insn.raw.hex(' '):18s} {insn}")
 
         offset += insn.length
 
 
-def buf_get_len(fp: BufferedReader) -> int:
-    orig_pos: int = fp.tell()
-
-    fp.seek(0, SEEK_END)
-
-    length: int = fp.tell()
-
-    fp.seek(orig_pos, SEEK_SET)
-
-    return length
-
-
-def buf_read(fp: BufferedReader, offset: int, size: int) -> bytes:
-    fp.seek(offset, SEEK_SET)
-
-    return fp.read(size)
-
-
 def main() -> None:
+    """Entry point."""
     filename: str
 
     for filename in TEST_INPUTS:
         print(f"*** {filename} ***")
 
         with open(filename, 'rb') as fp:
-            dasm(fp)
+            fbuf: FileBuffer = FileBuffer(fp)
+            dasm(fbuf)
 
         print("\n")
 
