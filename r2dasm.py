@@ -18,6 +18,11 @@ TEST_INPUTS: Final[list[str]] = [
     #'MAsm_CPU_Sync.bin',
     #'MAsm_CPU_SwDbgBp.bin',
     #'MAsm_CPU_TimerInit.bin',
+    'start.bin',
+    'MHAL_ADC_Set_ScartFBDelay.bin',
+    'MHAL_HDMI_Get_AvMuteReceivedStatus.bin',
+    'MHAL_PIU_TIMER_Set_TimerMax.bin',
+    'MHAL_HDMI_Set_EnAvMute.bin',
     ]
 
 ZEROES: Final[bytes] = b'\x00' * 4

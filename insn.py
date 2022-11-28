@@ -41,7 +41,7 @@ class BitRange:
         return value << self.value_offset
 
 
-class R2OperandTemplate:
+class R2OperandTempl:
     arg: str
     mask: int
     signed: bool = False
@@ -121,9 +121,9 @@ class R2Operand:
     signed: bool
     bit_length: int
     value: int
-    template: R2OperandTemplate
+    template: R2OperandTempl
 
-    def __init__(self, template: R2OperandTemplate, value: int):
+    def __init__(self, template: R2OperandTempl, value: int):
         self.template = template
         self.arg = template.arg
         self.bit_length = template.bit_length
@@ -131,7 +131,7 @@ class R2Operand:
 
         self.value = value
 
-class R2InsnTemplate:
+class R2InsnTempl:
     mnemonic: str
     length: int
     length_bits: int
@@ -139,7 +139,7 @@ class R2InsnTemplate:
     mask: int
     bits_template: str
     args: set[str]
-    opr_templates: dict[str, R2OperandTemplate]
+    opr_templates: dict[str, R2OperandTempl]
     args_format: str
     signed_args: set[str]
 
@@ -184,7 +184,7 @@ class R2InsnTemplate:
 
         arg: str
         for arg in self.args:
-            self.opr_templates[arg] = R2OperandTemplate(arg, self.bits_template, signed=arg in self.signed_args)
+            self.opr_templates[arg] = R2OperandTempl(arg, self.bits_template, signed=arg in self.signed_args)
 
         self.bits = int(''.join(ch if ch in {'0', '1'} else '0' for ch in self.bits_template), 2)
         self.mask = int(''.join('1' if ch in {'0', '1'} else '0' for ch in self.bits_template), 2)
@@ -202,46 +202,64 @@ class R2InsnTemplate:
 
         return R2Insn(self.length, instruction, self, args)
 
-INSNS: list[R2InsnTemplate] = [
+INSNS: list[R2InsnTempl] = [
     # 16-bit / 2-byte / "BT"?
-    R2InsnTemplate('l.nop',    2, '1000000000000001'),                               # disasm; guesse
-    R2InsnTemplate('bt.trap',  2, '1000000000000010', '1'),                          # disasm; don't know how to decode
-    R2InsnTemplate('l.jr?',    2, '100001xxxxxyyyyy', '??? r%x, r%y'),               # disasm
-    R2InsnTemplate('l.j',      2, '100100nnnnnnnnnn', '%n'),                         # chenxing
+    R2InsnTempl('l.nop',    2, '1000000000000001'),                               # disasm; guess
+    # XXX: don't know how to decode
+    R2InsnTempl('bt.trap',  2, '1000000000000010', '1'),                          # disasm
+    R2InsnTempl('l.jr?',    2, '100001xxxxxyyyyy', '??? r%x, r%y'),               # disasm
+    # XXX: not sure 
+    R2InsnTempl('l.add?',   2, '100011dddddaaaaa', 'r%d, r%d, r%a'),              # guess
+    R2InsnTempl('l.j',      2, '100100nnnnnnnnnn', '%n'),                         # chenxing
     # XXX: may be a mov-type insn that sets rD <- K
-    R2InsnTemplate('l.andi?',  2, '100110dddddkkkkk', 'r%d, r%d, %k', signed={'k'}), # disasm, guess
-    R2InsnTemplate('l.addi',   2, '100111dddddkkkkk', 'r%d, r%d, %k', signed={'k'}), # backtrace, guess
+    R2InsnTempl('l.andi?',  2, '100110dddddkkkkk', 'r%d, r%d, %k', signed={'k'}), # disasm, guess
+    R2InsnTempl('l.addi',   2, '100111dddddkkkkk', 'r%d, r%d, %k', signed={'k'}), # backtrace, guess
 
     # 24-bit / 3-byte / "BN"?
-    R2InsnTemplate('l.nop',   3, '000000000000000000000000'),                    # chenxing
-    R2InsnTemplate('l.lhz',   3, '000010dddddaaaaa00000001', 'r%d, 0(r%a)'),     # chenxing
-    R2InsnTemplate('l.sw',    3, '000011bbbbbaaaaa00000000', '0(r%a), r%b'),     # chenxing, backtrace
-    R2InsnTemplate('l.addi',  3, '000111dddddaaaaakkkkkkkk', 'r%d, r%a, %k', signed={'k'}), # chenxing, backtrace
-    R2InsnTemplate('l.bf',    3, '001000nnnnnnnnnnnnnnnn01', '%n', signed={'n'}),# chenxing(mod), disasm
-    R2InsnTemplate('l.movhi', 3, '001101100000000000000001', 'r1, ???'),         # chenxing
-    R2InsnTemplate('l.mul',   3, '010000dddddaaaaabbbbb011', 'r%d, r%a, r%b'),   # disasm
-    R2InsnTemplate('l.and',   3, '010001dddddaaaaabbbbb100', 'r%d, r%a, r%b'),   # chenxing
-    R2InsnTemplate('l.ori',   3, '010100aaaaabbbbbkkkkkkkk', 'r%a, r%b, %k'),    # chenxing
-    R2InsnTemplate('l.sfgtui',3, '010111aaaaaiiiiiiii11011', 'r%a, %i', signed={'i'}), # disasm
-    R2InsnTemplate('?entri?', 3, '010111xxxxyyyyyyyyy11000', '??? %x, %y'),      # backtrace
-    R2InsnTemplate('l.sfeqi', 3, '010111aaaaaiiiii00000001', 'r%a, %i'),         # chenxing
-    R2InsnTemplate('l.sfne',  3, '010111aaaaabbbbb00001101', 'r%a, r%b'),        # chenxing
-    R2InsnTemplate('l.sfgeu', 3, '010111bbbbbaaaaa00010111', 'r%a, r%b'),        # chenxing
+    R2InsnTempl('l.nop',   3, '000000000000000000000000'),                    # chenxing
+    # XXX: top bits of k may be a register, and this is an or?
+    R2InsnTempl('l.movhi?',3, '000001dddddkkkkkkkkkkkkk', 'r%d, %k'),
+    R2InsnTempl('l.lhz',   3, '000010dddddaaaaa00000001', 'r%d, 0(r%a)'),     # chenxing
+    R2InsnTempl('l.sw',    3, '000011bbbbbaaaaaiiiiii00', '%i(r%a), r%b', signed={'i'}),# chenxing, backtrace
+    # XXX: assuming this is l.lwz and not l.lws
+    R2InsnTempl('l.lwz?',  3, '000011dddddaaaaaiiiiii10', 'r%d, %i(r%a)', signed={'i'}),# guess
+    # XXX: assuming this is l.lwz and not l.lws
+    R2InsnTempl('l.lwz?',  3, '000100dddddaaaaaiiiiii00', 'r%d, %i(r%a)', signed={'i'}),# guess
+    R2InsnTempl('l.sw?',   3, '000110bbbbbaaaaaiiiiii00', '%i(r%a), r%b', signed={'i'}),#guess
+    R2InsnTempl('l.addi',  3, '000111dddddaaaaakkkkkkkk', 'r%d, r%a, %k', signed={'k'}),# chenxing, backtrace
+    R2InsnTempl('l.bf',    3, '001000nnnnnnnnnnnnnnnn01', '%n', signed={'n'}),# chenxing(mod), disasm
+                             # 001000000110000000101100
+    R2InsnTempl('?cmpjmp?',3, '001001aaaaaiiinnnnnnnn01', 'r%a, %i, %n', signed={'n'}),# wild guess
+    R2InsnTempl('l.movhi', 3, '001101100000000000000001', 'r1, ???'),         # chenxing
+    R2InsnTempl('l.mul',   3, '010000dddddaaaaabbbbb011', 'r%d, r%a, r%b'),   # disasm
+    R2InsnTempl('l.and',   3, '010001dddddaaaaabbbbb100', 'r%d, r%a, r%b'),   # chenxing
+    R2InsnTempl('l.or?',   3, '010001dddddaaaaabbbbb101', 'r%d, r%a, r%b'),   # guess
+    R2InsnTempl('l.ori',   3, '010100dddddaaaaakkkkkkkk', 'r%d, r%a, %k'),    # chenxing
+    R2InsnTempl('l.andi',  3, '010101dddddaaaaakkkkkkkk', 'r%d, r%a, %k'),    # guess
+    R2InsnTempl('l.sfgtui',3, '010111aaaaaiiiiiiii11011', 'r%a, %i', signed={'i'}), # disasm
+    R2InsnTempl('?entri?', 3, '010111xxxxyyyyyyyyy11000', '??? %x, %y'),      # backtrace
+    R2InsnTempl('l.sfeqi', 3, '010111aaaaaiiiii00000001', 'r%a, %i'),         # chenxing
+    R2InsnTempl('l.sfne',  3, '010111aaaaabbbbb00001101', 'r%a, r%b'),        # chenxing
+    R2InsnTempl('l.sfgeu', 3, '010111bbbbbaaaaa00010111', 'r%a, r%b'),        # chenxing
 
     # 32-bit / 4-byte / "BG"?
-    R2InsnTemplate('l.movhi', 4, '110000dddddkkkkkkkkkkkkkkkk00001', 'r%d, %k'),                # chenxing(mod), disasm
-    R2InsnTemplate('l.mtspr', 4, '110000bbbbbaaaaakkkkkkkkkkkk1101', 'r%a, r%b, %k'),           # chenxing
-    R2InsnTemplate('l.mfspr', 4, '110000dddddaaaaakkkkkkkkkkkk1111', 'r%d, r%a, %k'),           # chenxing
-    R2InsnTemplate('l.andi',  4, '110001dddddaaaaakkkkkkkkkkkkkkkk', 'r%d, r%a, %k'),           # chenxing
-    R2InsnTemplate('l.ori',   4, '110010dddddaaaaakkkkkkkkkkkkkkkk', 'r%d, r%a, %k'),           # chenxing
+    R2InsnTempl('l.movhi', 4, '110000dddddkkkkkkkkkkkkkkkk00001', 'r%d, %k'),                # chenxing(mod), disasm
+    R2InsnTempl('l.mtspr', 4, '110000bbbbbaaaaakkkkkkkkkkkk1101', 'r%a, r%b, %k'),           # chenxing
+    R2InsnTempl('l.mfspr', 4, '110000dddddaaaaakkkkkkkkkkkk1111', 'r%d, r%a, %k'),           # chenxing
+    R2InsnTempl('l.andi',  4, '110001dddddaaaaakkkkkkkkkkkkkkkk', 'r%d, r%a, %k'),           # chenxing
+    R2InsnTempl('l.ori',   4, '110010dddddaaaaakkkkkkkkkkkkkkkk', 'r%d, r%a, %k'),           # chenxing
     # XXX: n is probably wrong
-    R2InsnTemplate('l.bf',    4, '11010100nnnnnnnnnnnnnnnnnnnnnnnn', '%n', signed={'n'}),       # disasm, guess
-    R2InsnTemplate('l.j',     4, '111010nnnnnnnnnnnnnnnnnnnnnnnn11', '%n'),                     # chenxing
-    R2InsnTemplate('l.sw',    4, '111011bbbbbaaaaaiiiiiiiiiiiiiiii', '%i(r%a), r%b'),           # chenxing, backtrace
-    R2InsnTemplate('l.addi',  4, '111111dddddaaaaakkkkkkkkkkkkkkkk', 'r%d, r%a, %k'),           # chenxing, backtrace
-    R2InsnTemplate('l.invalidate_line', 4, '11110100000aaaaa00000000000j0001', '0(r%a), %j'),   # chenxing
-    R2InsnTemplate('l.invalidate_line', 4, '11110100000aaaaa00000000001j0111', '0(r%a), %j'),   # disasm
-    R2InsnTemplate('l.syncwritebuffer', 4, '11110100000000000000000000000101'),                 # disasm
+    R2InsnTempl('l.bf',    4, '11010100nnnnnnnnnnnnnnnnnnnnnnnn', '%n', signed={'n'}),       # disasm, guess
+    # XXX: n is probably wrong
+    R2InsnTempl('l.jal?',  4, '111001nnnnnnnnnnnnnnnnnnnnnnnnnn', '%n', signed={'n'}),       # guess
+    R2InsnTempl('l.j',     4, '111010nnnnnnnnnnnnnnnnnnnnnnnn11', '%n', signed={'n'}),       # chenxing
+    R2InsnTempl('l.sw',    4, '111011bbbbbaaaaaiiiiiiiiiiiiii00', '%i(r%a), r%b', signed={'i'}), # chenxing, backtrace
+    R2InsnTempl('l.lwz?',  4, '111011dddddaaaaaiiiiiiiiiiiiii10', 'r%d, %i(r%a)', signed={'i'}), # guess
+    R2InsnTempl('l.addi',  4, '111111dddddaaaaakkkkkkkkkkkkkkkk', 'r%d, r%a, %k'),           # chenxing, backtrace
+    
+    R2InsnTempl('l.invalidate_line', 4, '11110100000aaaaa00000000000j0001', '0(r%a), %j'),   # chenxing
+    R2InsnTempl('l.invalidate_line', 4, '11110100000aaaaa00000000001j0111', '0(r%a), %j'),   # disasm
+    R2InsnTempl('l.syncwritebuffer', 4, '11110100000000000000000000000101'),                 # disasm
 ]
 
 
@@ -249,11 +267,11 @@ class R2Insn:
     """A disassembled instruction."""
     length: int
     bits: int
-    template: R2InsnTemplate | None
+    template: R2InsnTempl | None
     args: dict[str, R2Operand] | None
     raw: bytes
 
-    def __init__(self, length: int, bits: int, template: R2InsnTemplate | None = None, args: dict[str, R2Operand] | None = None):
+    def __init__(self, length: int, bits: int, template: R2InsnTempl | None = None, args: dict[str, R2Operand] | None = None):
         self.template = template
         self.length = length
         self.bits = bits
